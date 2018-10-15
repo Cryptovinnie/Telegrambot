@@ -95,4 +95,11 @@ const (
 
 	// OS Interrupt Signals
 	MsgOSInteruptSig = "*Wing Commander* OS Interupt Signal Received. Exiting."
+
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "master"
+	dbname   = "skycoinbot"
+
 )
