@@ -27,13 +27,6 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "master"
-	dbname   = "skycoinbot"
-)
 
 func skycoinCliInput(x string) string {
 	path := "/home/josh/go/bin/skycoin-cli"
@@ -173,7 +166,7 @@ func (bot *Bot) handleCommandCreateAddressLink(ctx *BotContext, command, args st
 	 
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname) //Connect to psql database.
+		wcconst.host, wcconst.port, wcconst.user, wcconst.password, wcconst.dbname) //Connect to psql database.
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		panic(err)
@@ -186,7 +179,6 @@ func (bot *Bot) handleCommandCreateAddressLink(ctx *BotContext, command, args st
 	}
 
 	success := "Successfully Connected to DB"
-	fmt.Println(success)
 	log.Debugf("Handle command: %s ", success)
 
 	sqlStatement := `SELECT id, public_wallet FROM users WHERE telegram_username=$1;`
@@ -211,6 +203,7 @@ func (bot *Bot) handleCommandCreateAddressLink(ctx *BotContext, command, args st
 		if err != nil {
 			panic(err)
 		}
+		
 		//User address did not exist created address and added to SQL table. 
 		fmt.Println("New record ID is:", id)
 		log.Debugf("Bot.NewRecordIDis: %s", id)
@@ -223,7 +216,7 @@ func (bot *Bot) handleCommandCreateAddressLink(ctx *BotContext, command, args st
 
 	}
 	//Address alread created and exists.
-	err1 := bot.Send(ctx, getSendModeforContext(ctx), "markdown", public_wallet) //send message here
+	err1 := bot.Send(ctx, getSendModeforContext(ctx), "markdown", public_wallet) //send message here with public wallet address. 
 	log.Debugf("Bot.AddressCreatedis: %s", public_wallet)
 	if err1 != nil {
 		logSendError("Bot.handleCommandStart", err)
@@ -249,7 +242,7 @@ func (bot *Bot) handleCommandSendSky(ctx *BotContext, command, args string) erro
 	
 	var UserName = ctx.message.Chat.UserName
 	var chatid = ctx.message.Chat.ID
-	var RecipientUserName := "@Synth"
+	var RecipientUserName := "@Synth" //Get recipient @recipient out of message. 
 	var AmounttoSend := 1 //enter in arg from message here.
 
 	row := db.QueryRow(sqlStatement, UserName)
@@ -342,15 +335,17 @@ func (bot *Bot) handleCommandSendSky(ctx *BotContext, command, args string) erro
 	}
 	return err
 	
-	//If amount wanting to send is greater then Available balance send error. 
+	//4. If amount wanting to send is greater then Available balance send error. 
 		if AmounttoSend > ConfirmedSkyBalance {
 			balance := fmt.Sprintf("%s%d%s%d", "Unable to Send: " , AmounttoSend, "Spendable Amount is: ", ConfirmedSkyBalance) //Convert to string %s, %d for int
 			log.Debugf("Bot.Amounttosend: %s", balance)
 		}
 		else {
 		// Amount to spend is less then ConfirmedSkycoinBalance. 
-		// Create transaction here and send 
-		Input := skycoinCliInput("sendTo -amount "+ AmounttoSend + "-sendto" recipientPublicWallet + "-fromaddress " + sendersPublicWallet + "-changeaddress "+ sendersPublicWallet) //String to enter after skycoin-cli "Sendto"
+		// 5. Create transaction here and send 
+		InputString := fmt.Sprintf("%s%d%s%s%s%s%s%s", "Send -amount " , Amounttosend, "-sendto ", recipientPublicWallet, "-fromaddress ",sendersPublicWallet,"-changeaddress ",sendersPublicWallet)
+		log.Debugf("Bot.InputString: %s", InputString)
+		Input := skycoinCliInput(InputString) //String to enter after skycoin-cli "Sendto"
 		SendTransaction := Input                        											//Save transaction Json data. 
 		
 		ConfirmationTx := fmt.Sprintf("%s%d", "Transaction: " , SendTransaction) //Convert to string %s, %d for int
@@ -361,6 +356,8 @@ func (bot *Bot) handleCommandSendSky(ctx *BotContext, command, args string) erro
 		}
 		return err
 		}
+		//6. If recipient has address and ChatID that isnt 000 also send them a message 
+		
 
 }
 
